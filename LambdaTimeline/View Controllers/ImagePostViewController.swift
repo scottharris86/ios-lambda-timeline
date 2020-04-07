@@ -8,8 +8,15 @@
 
 import UIKit
 import Photos
+import CoreImage.CIFilterBuiltins
+import CoreImage
 
 class ImagePostViewController: ShiftableViewController {
+    @IBOutlet weak var processingSegementedControl: UISegmentedControl!
+    @IBOutlet weak var blurSlider: UISlider!
+    
+    private var context = CIContext(options: nil)
+    private var originalImage: UIImage?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,13 +50,16 @@ class ImagePostViewController: ShiftableViewController {
             return
         }
         
-        let imagePicker = UIImagePickerController()
+        DispatchQueue.main.async {
+            let imagePicker = UIImagePickerController()
+            
+            imagePicker.delegate = self
+            
+            imagePicker.sourceType = .photoLibrary
+            
+            self.present(imagePicker, animated: true, completion: nil)
+        }
         
-        imagePicker.delegate = self
-        
-        imagePicker.sourceType = .photoLibrary
-
-        present(imagePicker, animated: true, completion: nil)
     }
     
     @IBAction func createPost(_ sender: Any) {
@@ -114,6 +124,112 @@ class ImagePostViewController: ShiftableViewController {
         view.layoutSubviews()
     }
     
+    @IBAction func blurSliderChanged(_ sender: Any) {
+        // UIImage -> CGImage (Core Graphics) -> CIImage
+        guard let image = originalImage else { return }
+        
+        imageView.image = blurImage(image)
+    }
+    
+    @IBAction func processingTypeChanged(_ sender: Any) {
+        switch processingSegementedControl.selectedSegmentIndex {
+            case 0:
+                blurSlider.isHidden = false
+                if let originalImage = originalImage {
+                    imageView.image = blurImage(originalImage)
+                }
+            case 1:
+                blurSlider.isHidden = true
+                if let originalImage = originalImage {
+                    imageView.image = comicImage(originalImage)
+                }
+            case 2:
+                blurSlider.isHidden = true
+                if let originalImage = originalImage {
+                    imageView.image = tileImage(originalImage)
+                }
+            case 3:
+                blurSlider.isHidden = true
+                if let originalImage = originalImage {
+                    imageView.image = kaleidoscopeImage(originalImage)
+                }
+            default:
+            break
+            
+        }
+    }
+    
+    func comicImage(_ image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
+        
+        // Filter
+        let filter = CIFilter.comicEffect()
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        
+        // Render the image
+        guard let outputCIImage = filter.outputImage else { return nil }
+        guard let outputCGImage = context.createCGImage(outputCIImage, from: CGRect(origin: .zero, size: image.size)) else { return nil }
+        
+        // CIImage -> CGImage -> UIImage
+        return UIImage(cgImage: outputCGImage)
+        
+    }
+    
+    func tileImage(_ image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
+        
+        // Filter
+        let filter = CIFilter.opTile()
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        
+        // Render the image
+        guard let outputCIImage = filter.outputImage else { return nil }
+        guard let outputCGImage = context.createCGImage(outputCIImage, from: CGRect(origin: .zero, size: image.size)) else { return nil }
+        
+        // CIImage -> CGImage -> UIImage
+        return UIImage(cgImage: outputCGImage)
+        
+    }
+    
+    func kaleidoscopeImage(_ image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
+        
+        // Filter
+        let filter = CIFilter.kaleidoscope()
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        
+        // Render the image
+        guard let outputCIImage = filter.outputImage else { return nil }
+        guard let outputCGImage = context.createCGImage(outputCIImage, from: CGRect(origin: .zero, size: image.size)) else { return nil }
+        
+        // CIImage -> CGImage -> UIImage
+        return UIImage(cgImage: outputCGImage)
+        
+    }
+    
+    
+    func blurImage(_ image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let ciImage = CIImage(cgImage: cgImage)
+        
+        // Filter
+        let filter = CIFilter.gaussianBlur()
+        
+        filter.inputImage = ciImage
+        filter.radius = blurSlider.value
+        
+        // Render the image
+        guard let outputCIImage = filter.outputImage else { return nil }
+        guard let outputCGImage = context.createCGImage(outputCIImage, from: CGRect(origin: .zero, size: image.size)) else { return nil }
+        
+        // CIImage -> CGImage -> UIImage
+        return UIImage(cgImage: outputCGImage)
+        
+    }
+    
     var postController: PostController!
     var post: Post?
     var imageData: Data?
@@ -125,6 +241,8 @@ class ImagePostViewController: ShiftableViewController {
     @IBOutlet weak var postButton: UIBarButtonItem!
 }
 
+
+
 extension ImagePostViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
@@ -135,7 +253,9 @@ extension ImagePostViewController: UIImagePickerControllerDelegate, UINavigation
         
         guard let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage else { return }
         
+        
         imageView.image = image
+        originalImage = image
         
         setImageViewHeight(with: image.ratio)
     }
