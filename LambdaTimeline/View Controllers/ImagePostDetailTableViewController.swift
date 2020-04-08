@@ -32,32 +32,38 @@ class ImagePostDetailTableViewController: UITableViewController {
     
     @IBAction func createComment(_ sender: Any) {
         
-        let alert = UIAlertController(title: "Add a comment", message: "Write your comment below:", preferredStyle: .alert)
+        let commentController = CommentViewController()
+        commentController.delegate = self
         
-        var commentTextField: UITextField?
+//        navigationController?.pushViewController(commentController, animated: true)
+        present(commentController, animated: true)
         
-        alert.addTextField { (textField) in
-            textField.placeholder = "Comment:"
-            commentTextField = textField
-        }
-        
-        let addCommentAction = UIAlertAction(title: "Add Comment", style: .default) { (_) in
-            
-            guard let commentText = commentTextField?.text else { return }
-            
-            self.postController.addComment(with: commentText, to: &self.post!)
-            
-            DispatchQueue.main.async {
-                self.tableView.reloadData()
-            }
-        }
-        
-        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-        
-        alert.addAction(addCommentAction)
-        alert.addAction(cancelAction)
-        
-        present(alert, animated: true, completion: nil)
+//        let alert = UIAlertController(title: "Add a comment", message: "Write your comment below:", preferredStyle: .alert)
+//
+//        var commentTextField: UITextField?
+//
+//        alert.addTextField { (textField) in
+//            textField.placeholder = "Comment:"
+//            commentTextField = textField
+//        }
+//
+//        let addCommentAction = UIAlertAction(title: "Add Comment", style: .default) { (_) in
+//
+//            guard let commentText = commentTextField?.text else { return }
+//
+//            self.postController.addComment(with: commentText, to: &self.post!)
+//
+//            DispatchQueue.main.async {
+//                self.tableView.reloadData()
+//            }
+//        }
+//
+//        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+//
+//        alert.addAction(addCommentAction)
+//        alert.addAction(cancelAction)
+//
+//        present(alert, animated: true, completion: nil)
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -85,4 +91,10 @@ class ImagePostDetailTableViewController: UITableViewController {
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var authorLabel: UILabel!
     @IBOutlet weak var imageViewAspectRatioConstraint: NSLayoutConstraint!
+}
+
+extension ImagePostDetailTableViewController: CreateCommentDelegate {
+    func createComment(audioURL: URL?, text: String?) {
+        print("called delegate")
+    }
 }
